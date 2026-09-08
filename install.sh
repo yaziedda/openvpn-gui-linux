@@ -33,56 +33,72 @@ detect_os() {
 
 OS=$(detect_os)
 
-# Install openvpn3 if not found
-install_openvpn3() {
-    if command -v openvpn3 &>/dev/null; then
-        info "openvpn3 already installed, skipping."
-        return
-    fi
-
-    info "Installing openvpn3..."
+# Install dependencies (openvpn3 and webkit2gtk)
+install_dependencies() {
+    info "Checking dependencies..."
 
     case "$OS" in
         ubuntu|debian|linuxmint|pop)
-            sudo apt-get update -qq
-            sudo apt-get install -y openvpn3 2>/dev/null || {
-                # Fallback: add official OpenVPN repo
-                warn "openvpn3 not in apt, adding OpenVPN official repo..."
-                sudo apt-get install -y curl gnupg
-                curl -fsSL https://packages.openvpn.net/packages-repo.gpg \
-                    | sudo gpg --dearmor -o /usr/share/keyrings/openvpn.gpg
-                echo "deb [signed-by=/usr/share/keyrings/openvpn.gpg] \
-https://packages.openvpn.net/openvpn3/debian $(. /etc/os-release && echo $VERSION_CODENAME) main" \
-                    | sudo tee /etc/apt/sources.list.d/openvpn3.list > /dev/null
+            DEPS_TO_INSTALL=""
+            if ! command -v openvpn3 &>/dev/null; then
+                DEPS_TO_INSTALL="$DEPS_TO_INSTALL openvpn3"
+            fi
+            if ! ldconfig -p | grep -q "libwebkit2gtk-4.1"; then
+                DEPS_TO_INSTALL="$DEPS_TO_INSTALL libwebkit2gtk-4.1-0"
+            fi
+
+            if [ -n "$DEPS_TO_INSTALL" ]; then
+                info "Installing dependencies:$DEPS_TO_INSTALL..."
                 sudo apt-get update -qq
-                sudo apt-get install -y openvpn3
-            }
+                sudo apt-get install -y $DEPS_TO_INSTALL 2>/dev/null || {
+                    if echo "$DEPS_TO_INSTALL" | grep -q "openvpn3"; then
+                        warn "Adding OpenVPN official repo..."
+                        sudo apt-get install -y curl gnupg
+                        curl -fsSL https://packages.openvpn.net/packages-repo.gpg \
+                            | sudo gpg --dearmor -o /usr/share/keyrings/openvpn.gpg
+                        echo "deb [signed-by=/usr/share/keyrings/openvpn.gpg] \
+https://packages.openvpn.net/openvpn3/debian $(. /etc/os-release && echo $VERSION_CODENAME) main" \
+                            | sudo tee /etc/apt/sources.list.d/openvpn3.list > /dev/null
+                        sudo apt-get update -qq
+                        sudo apt-get install -y openvpn3 libwebkit2gtk-4.1-0
+                    fi
+                }
+            fi
             ;;
         fedora)
-            sudo dnf install -y openvpn3-client
+            if ! command -v openvpn3 &>/dev/null; then
+                sudo dnf install -y openvpn3-client webkit2gtk4.1
+            fi
             ;;
         arch|manjaro|endeavouros)
-            if command -v yay &>/dev/null; then
-                yay -S --noconfirm openvpn3
-            elif command -v paru &>/dev/null; then
-                paru -S --noconfirm openvpn3
-            else
-                warn "AUR helper not found. Install openvpn3 manually:"
-                warn "  yay -S openvpn3"
-                warn "Then re-run this script."
-                exit 1
+            ARCH_DEPS=""
+            if ! command -v openvpn3 &>/dev/null; then
+                ARCH_DEPS="$ARCH_DEPS openvpn3"
+            fi
+            if ! ldconfig -p | grep -q "libwebkit2gtk-4.1"; then
+                ARCH_DEPS="$ARCH_DEPS webkit2gtk-4.1"
+            fi
+
+            if [ -n "$ARCH_DEPS" ]; then
+                if command -v yay &>/dev/null; then
+                    yay -S --noconfirm $ARCH_DEPS
+                elif command -v paru &>/dev/null; then
+                    paru -S --noconfirm $ARCH_DEPS
+                else
+                    warn "AUR helper not found. Please install:$ARCH_DEPS manually."
+                    exit 1
+                fi
             fi
             ;;
         *)
-            warn "Unsupported distro '$OS'. Install openvpn3 manually then re-run."
-            exit 1
+            warn "Unsupported distro '$OS'. Please ensure openvpn3 and webkit2gtk-4.1 are installed."
             ;;
     esac
 
-    info "openvpn3 installed!"
+    info "Dependencies verified!"
 }
 
-install_openvpn3
+install_dependencies
 
 # Download binary
 info "Fetching latest release..."
