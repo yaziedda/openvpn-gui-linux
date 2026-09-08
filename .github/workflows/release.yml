@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            pkg-config \
+            build-essential \
+            libglib2.0-dev
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build
+        run: wails build -platform linux/amd64 -o openvpn-gui-linux
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "OpenVPN Linux GUI ${{ github.ref_name }}"
+          body: |
+            ## Install
+
+            ```bash
+            curl -sL https://raw.githubusercontent.com/yaziedda/openvpn-gui-linux/main/install-remote.sh | bash
+            ```
+
+            Or download the binary below and run `./install.sh` manually.
+
+            ## Requirements
+            - Linux (Ubuntu 22.04+ recommended)
+            - OpenVPN3: `sudo apt install openvpn3`
+          files: build/bin/openvpn-gui-linux
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
