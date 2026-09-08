@@ -7,7 +7,7 @@ Minimal, fast, and supports 2FA authentication out of the box.
 ## Quick Install
 
 ```bash
-curl -sL https://raw.githubusercontent.com/yaziedda/openvpn-gui-linux/main/install-remote.sh | bash
+curl -sL https://raw.githubusercontent.com/yaziedda/openvpn-gui-linux/main/install.sh | bash
 ```
 
 Search **"OpenVPN Linux GUI"** from your app launcher. Done.
