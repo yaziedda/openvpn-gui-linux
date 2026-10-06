@@ -222,6 +222,27 @@ app.innerHTML = `
         </section>
     </main>
 
+    <!-- 6. TERMINATING / KILLING OVERLAY -->
+    <div id="killing-overlay" class="killing-overlay hidden">
+        <div class="killing-modal">
+            <div class="killing-icon-wrap">
+                <div class="killing-pulse"></div>
+                <div class="killing-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                </div>
+            </div>
+            <h3 class="killing-title">Terminating Sessions...</h3>
+            <p class="killing-subtitle">Force-killing OpenVPN tunnels & clearing routes</p>
+            <div class="killing-progress-bar">
+                <div class="killing-progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST NOTIFICATION -->
     <div id="toast" class="toast hidden"></div>
 `;
@@ -569,6 +590,8 @@ function updateUI(s) {
         waiting_2fa: '2FA Required',
         verifying_2fa: 'Verifying...',
         connected: 'Secured',
+        disconnecting: 'Disconnecting...',
+        terminating: 'Terminating...',
         auth_failed: 'Auth Failed'
     };
     statusText.textContent = labels[s] || s;
@@ -578,10 +601,25 @@ function updateUI(s) {
     }
 
     // Toggle panels
-    loginForm.classList.toggle('hidden', s === 'connecting' || s === 'waiting_2fa' || s === 'verifying_2fa' || s === 'connected');
+    loginForm.classList.toggle('hidden', s === 'connecting' || s === 'waiting_2fa' || s === 'verifying_2fa' || s === 'connected' || s === 'disconnecting');
     connectingView.classList.toggle('hidden', s !== 'connecting');
     otpForm.classList.toggle('hidden', s !== 'waiting_2fa' && s !== 'verifying_2fa');
-    connectedView.classList.toggle('hidden', s !== 'connected');
+    connectedView.classList.toggle('hidden', s !== 'connected' && s !== 'disconnecting');
+
+    // Killing overlay reactive toggle
+    const overlay = $('killing-overlay');
+    if (s === 'terminating') {
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            void overlay.offsetWidth;
+            overlay.classList.add('visible');
+        }
+    } else {
+        if (overlay && overlay.classList.contains('visible')) {
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.classList.add('hidden'), 200);
+        }
+    }
 
     if (s === 'connecting') {
         $('connecting-profile-name').textContent = currentProfileName || configInput.value.split('/').pop() || 'OpenVPN Server';
@@ -674,23 +712,86 @@ $('btn-otp').addEventListener('click', async () => {
     await SendOTP(otp);
 });
 
-$('btn-disconnect').addEventListener('click', () => Disconnect());
-$('hero-toggle-btn').addEventListener('click', () => Disconnect());
-$('btn-cancel-conn').addEventListener('click', () => Disconnect());
-$('btn-cancel-otp').addEventListener('click', () => Disconnect());
+async function handleDisconnect() {
+    const discBtn = $('btn-disconnect');
+    const toggleBtn = $('hero-toggle-btn');
+    if (discBtn) {
+        discBtn.disabled = true;
+        discBtn.innerHTML = '<span class="btn-spinner"></span> Disconnecting...';
+    }
+    if (toggleBtn) {
+        toggleBtn.classList.remove('active');
+        toggleBtn.classList.add('disconnecting');
+    }
+    statusPill.className = 'status-indicator disconnecting';
+    statusText.textContent = 'Disconnecting...';
+
+    try {
+        await Disconnect();
+        showToast('VPN disconnected ✓');
+    } catch {
+        showToast('Error disconnecting');
+    } finally {
+        if (discBtn) {
+            discBtn.disabled = false;
+            discBtn.textContent = 'Disconnect';
+        }
+        if (toggleBtn) {
+            toggleBtn.classList.remove('disconnecting');
+        }
+    }
+}
+
+$('btn-disconnect').addEventListener('click', handleDisconnect);
+$('hero-toggle-btn').addEventListener('click', handleDisconnect);
+$('btn-cancel-conn').addEventListener('click', handleDisconnect);
+$('btn-cancel-otp').addEventListener('click', handleDisconnect);
 
 async function handleKillAll() {
     const hdrBtn = $('btn-kill-hdr');
     const connBtn = $('btn-clear-connected');
-    if (hdrBtn) hdrBtn.disabled = true;
-    if (connBtn) { connBtn.disabled = true; connBtn.textContent = 'Killing...'; }
+    const overlay = $('killing-overlay');
+
+    if (hdrBtn) {
+        hdrBtn.disabled = true;
+        hdrBtn.innerHTML = '<span class="btn-spinner red"></span>';
+    }
+    if (connBtn) {
+        connBtn.disabled = true;
+        connBtn.innerHTML = '<span class="btn-spinner red"></span> Terminating...';
+    }
+
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        void overlay.offsetWidth;
+        overlay.classList.add('visible');
+    }
+
+    statusPill.className = 'status-indicator terminating';
+    statusText.textContent = 'Terminating...';
 
     try {
-        showToast('Killing OpenVPN sessions...');
         await ClearAllSessions();
+        showToast('All sessions terminated & cleared ✓');
+    } catch {
+        showToast('Error terminating sessions');
     } finally {
-        if (hdrBtn) hdrBtn.disabled = false;
-        if (connBtn) { connBtn.disabled = false; connBtn.textContent = 'Kill All'; }
+        if (overlay) {
+            overlay.classList.remove('visible');
+            setTimeout(() => overlay.classList.add('hidden'), 200);
+        }
+        if (hdrBtn) {
+            hdrBtn.disabled = false;
+            hdrBtn.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>`;
+        }
+        if (connBtn) {
+            connBtn.disabled = false;
+            connBtn.textContent = 'Kill All';
+        }
     }
 }
 

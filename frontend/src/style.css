@@ -35,6 +35,7 @@ body {
 }
 
 #app {
+    position: relative;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -168,6 +169,27 @@ body {
     background: #f59e0b;
     box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
     animation: blink-dot 0.6s infinite alternate;
+}
+
+.status-indicator.disconnecting {
+    background: rgba(245, 158, 11, 0.14);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+.status-indicator.disconnecting .status-dot {
+    background: #f59e0b;
+    animation: blink-dot 0.6s infinite alternate;
+}
+
+.status-indicator.terminating {
+    background: rgba(239, 68, 68, 0.16);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+.status-indicator.terminating .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+    animation: blink-dot 0.5s infinite alternate;
 }
 
 .status-indicator.auth_failed {
@@ -509,6 +531,18 @@ input::placeholder {
 
 .switch-toggle.active .switch-handle {
     transform: translateX(20px);
+}
+
+.switch-toggle.disconnecting {
+    background: #334155;
+    border-color: #475569;
+    cursor: wait;
+    opacity: 0.8;
+}
+
+.switch-toggle.disconnecting .switch-handle {
+    transform: translateX(10px);
+    background: #94a3b8;
 }
 
 /* CHART CONTAINER */
@@ -876,6 +910,11 @@ canvas#network-chart {
     to { transform: rotate(360deg); }
 }
 
+.btn-spinner.red {
+    border-color: rgba(239, 68, 68, 0.3);
+    border-top-color: #ef4444;
+}
+
 /* LOG SECTION */
 .log-section {
     margin-top: auto;
@@ -974,6 +1013,118 @@ canvas#network-chart {
 .toast.visible {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+
+/* TERMINATING / KILLING OVERLAY */
+.killing-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 12, 16, 0.88);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.killing-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.killing-modal {
+    background: #121622;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    padding: 24px 20px;
+    width: 290px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 24px rgba(239, 68, 68, 0.15);
+    transform: scale(0.95);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.killing-overlay.visible .killing-modal {
+    transform: scale(1);
+}
+
+.killing-icon-wrap {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.killing-pulse {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgba(239, 68, 68, 0.5);
+    animation: killing-radar 1.4s infinite cubic-bezier(0, 0.2, 0.8, 1);
+}
+
+@keyframes killing-radar {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+
+.killing-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+}
+
+.killing-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.2px;
+}
+
+.killing-subtitle {
+    font-size: 11px;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+.killing-progress-bar {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.killing-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    border-radius: 999px;
+    width: 40%;
+    animation: indeterminate-progress 1.2s infinite ease-in-out;
+}
+
+@keyframes indeterminate-progress {
+    0% { transform: translateX(-100%); width: 30%; }
+    50% { width: 60%; }
+    100% { transform: translateX(300%); width: 30%; }
 }
 
 .hidden {

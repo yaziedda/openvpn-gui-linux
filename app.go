@@ -364,6 +364,8 @@ func (a *App) Disconnect() string {
 	cfg := a.configFile
 	a.mu.Unlock()
 
+	a.setStatus("disconnecting")
+
 	if cancel != nil {
 		cancel()
 	}
@@ -376,6 +378,8 @@ func (a *App) ClearAllSessions() string {
 	a.mu.Lock()
 	cancel := a.cancel
 	a.mu.Unlock()
+
+	a.setStatus("terminating")
 
 	if cancel != nil {
 		cancel()
