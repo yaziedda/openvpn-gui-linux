@@ -355,6 +355,7 @@ func (a *App) SendOTP(otp string) {
 	if w != nil {
 		w.Write([]byte(otp + "\n"))
 	}
+	a.setStatus("verifying_2fa")
 }
 
 func (a *App) Disconnect() string {

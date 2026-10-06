@@ -184,18 +184,24 @@ app.innerHTML = `
 
         <!-- 4. OTP / 2FA STATE -->
         <section id="otp-form" class="panel otp-panel hidden">
-            <div class="otp-shield">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
+            <div class="otp-shield-wrap" id="otp-shield-wrap">
+                <div class="otp-shield-pulse"></div>
+                <div class="otp-shield">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                </div>
             </div>
-            <h3 class="state-title">Two-Factor Authentication</h3>
-            <p class="state-subtitle">Enter your 6-digit Authenticator code</p>
+            <h3 class="state-title" id="otp-title">Two-Factor Authentication</h3>
+            <p class="state-subtitle" id="otp-desc">Enter your 6-digit Authenticator code</p>
             <div class="otp-input-wrap">
                 <input type="text" id="otp" placeholder="000 000" maxlength="8" autofocus class="otp-field"/>
             </div>
             <div class="otp-buttons">
-                <button class="btn-primary" id="btn-otp">Verify Code</button>
+                <button class="btn-primary" id="btn-otp">
+                    <span class="btn-spinner hidden" id="otp-spinner"></span>
+                    <span id="btn-otp-text">Verify Code</span>
+                </button>
                 <button class="btn-secondary" id="btn-cancel-otp">Cancel</button>
             </div>
         </section>
@@ -561,6 +567,7 @@ function updateUI(s) {
         disconnected: 'Disconnected',
         connecting: 'Connecting...',
         waiting_2fa: '2FA Required',
+        verifying_2fa: 'Verifying...',
         connected: 'Secured',
         auth_failed: 'Auth Failed'
     };
@@ -571,9 +578,9 @@ function updateUI(s) {
     }
 
     // Toggle panels
-    loginForm.classList.toggle('hidden', s === 'connecting' || s === 'waiting_2fa' || s === 'connected');
+    loginForm.classList.toggle('hidden', s === 'connecting' || s === 'waiting_2fa' || s === 'verifying_2fa' || s === 'connected');
     connectingView.classList.toggle('hidden', s !== 'connecting');
-    otpForm.classList.toggle('hidden', s !== 'waiting_2fa');
+    otpForm.classList.toggle('hidden', s !== 'waiting_2fa' && s !== 'verifying_2fa');
     connectedView.classList.toggle('hidden', s !== 'connected');
 
     if (s === 'connecting') {
@@ -581,11 +588,29 @@ function updateUI(s) {
     }
 
     if (s === 'waiting_2fa') {
+        $('otp').disabled = false;
+        $('btn-otp').disabled = false;
+        $('btn-otp-text').textContent = 'Verify Code';
+        $('otp-spinner').classList.add('hidden');
+        $('otp-shield-wrap').classList.remove('verifying');
+        $('otp-title').textContent = 'Two-Factor Authentication';
+        $('otp-desc').textContent = 'Enter your 6-digit Authenticator code';
         $('otp').value = '';
         setTimeout(() => $('otp').focus(), 100);
     }
 
+    if (s === 'verifying_2fa') {
+        $('otp').disabled = true;
+        $('btn-otp').disabled = true;
+        $('btn-otp-text').textContent = 'Verifying...';
+        $('otp-spinner').classList.remove('hidden');
+        $('otp-shield-wrap').classList.add('verifying');
+        $('otp-title').textContent = 'Verifying Code...';
+        $('otp-desc').textContent = 'Validating code & securing tunnel...';
+    }
+
     if (s === 'connected') {
+        showToast('Connected to VPN ✓');
         $('hero-profile-name').textContent = currentProfileName || 'OpenVPN Tunnel';
         $('hero-profile-cfg').textContent = configInput.value.split('/').pop() || '';
 
@@ -634,8 +659,19 @@ $('btn-connect').addEventListener('click', async () => {
 $('btn-otp').addEventListener('click', async () => {
     const otp = $('otp').value.trim();
     if (!otp) return;
+
+    // Instant interactive feedback before backend roundtrip
+    $('otp').disabled = true;
+    $('btn-otp').disabled = true;
+    $('btn-otp-text').textContent = 'Verifying...';
+    $('otp-spinner').classList.remove('hidden');
+    $('otp-shield-wrap').classList.add('verifying');
+    $('otp-title').textContent = 'Verifying Code...';
+    $('otp-desc').textContent = 'Validating code & securing tunnel...';
+    statusPill.className = 'status-indicator verifying_2fa';
+    statusText.textContent = 'Verifying...';
+
     await SendOTP(otp);
-    $('otp').value = '';
 });
 
 $('btn-disconnect').addEventListener('click', () => Disconnect());
@@ -687,7 +723,7 @@ window.addEventListener('keydown', (e) => {
 
     // Escape -> Disconnect or cancel
     if (e.key === 'Escape') {
-        if (currentStatus === 'connected' || currentStatus === 'connecting' || currentStatus === 'waiting_2fa') {
+        if (currentStatus === 'connected' || currentStatus === 'connecting' || currentStatus === 'waiting_2fa' || currentStatus === 'verifying_2fa') {
             e.preventDefault();
             Disconnect();
         }
@@ -699,6 +735,9 @@ window.addEventListener('keydown', (e) => {
         if (currentStatus === 'waiting_2fa') {
             e.preventDefault();
             $('btn-otp').click();
+        } else if (currentStatus === 'verifying_2fa') {
+            e.preventDefault();
+            // already verifying
         } else if (currentStatus === 'disconnected' || !currentStatus) {
             const activeTag = document.activeElement ? document.activeElement.tagName : '';
             if (activeTag !== 'BUTTON') {
