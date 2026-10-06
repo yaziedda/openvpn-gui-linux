@@ -1,4 +1,4 @@
-import {Connect, SendOTP, Disconnect, GetStatus, GetProfiles, SaveProfile, DeleteProfile, BrowseConfig} from '../wailsjs/go/main/App';
+import {Connect, SendOTP, Disconnect, ClearAllSessions, GetStatus, GetProfiles, SaveProfile, DeleteProfile, BrowseConfig} from '../wailsjs/go/main/App';
 import {EventsOn} from '../wailsjs/runtime/runtime';
 import './style.css';
 
@@ -52,6 +52,7 @@ app.innerHTML = `
         </div>
         <button class="btn-disconnect hidden" id="btn-disconnect">Disconnect</button>
         <div class="log-box" id="log"></div>
+        <button class="btn-clear-all" id="btn-clear-all" title="Force kill & clear all OpenVPN sessions">Clear All Sessions</button>
     </div>
 `;
 
@@ -144,6 +145,16 @@ $('btn-otp').addEventListener('click', async () => {
 $('otp').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-otp').click(); });
 passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-connect').click(); });
 btnDisconnect.addEventListener('click', () => Disconnect());
+$('btn-clear-all').addEventListener('click', async () => {
+    $('btn-clear-all').disabled = true;
+    $('btn-clear-all').textContent = 'Clearing...';
+    try {
+        await ClearAllSessions();
+    } finally {
+        $('btn-clear-all').disabled = false;
+        $('btn-clear-all').textContent = 'Clear All Sessions';
+    }
+});
 
 EventsOn('vpn-status', updateUI);
 EventsOn('vpn-log', line => { logEl.textContent += line + '\n'; logEl.scrollTop = logEl.scrollHeight; });

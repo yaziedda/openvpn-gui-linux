@@ -6,6 +6,8 @@ export function BrowseConfig():Promise<string>;
 
 export function Connect(arg1:string,arg2:string,arg3:string):Promise<string>;
 
+export function ClearAllSessions():Promise<string>;
+
 export function DeleteProfile(arg1:string):Promise<string>;
 
 export function Disconnect():Promise<string>;

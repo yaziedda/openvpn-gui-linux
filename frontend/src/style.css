@@ -189,3 +189,22 @@ button:disabled {
     border-top: 1px solid #2a2a4a;
     margin: 14px 0;
 }
+
+.btn-clear-all {
+    width: 100%;
+    margin-top: 10px;
+    background: transparent;
+    color: #777;
+    border: 1px solid #2a2a4a;
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 7px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-clear-all:hover {
+    background: rgba(198, 40, 40, 0.15);
+    border-color: #c62828;
+    color: #ff8a80;
+}

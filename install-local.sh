@@ -12,8 +12,7 @@ mkdir -p "$HOME/.local/bin"
 mkdir -p "$HOME/.local/share/applications"
 mkdir -p "$HOME/.local/share/icons"
 
-cp "$BIN_SRC" "$BIN_DEST"
-chmod +x "$BIN_DEST"
+install -m 755 "$BIN_SRC" "$BIN_DEST"
 cp "$ICON_SRC" "$ICON_DEST"
 
 cat > "$DESKTOP_FILE" <<EOF

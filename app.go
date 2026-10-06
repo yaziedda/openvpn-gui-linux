@@ -111,7 +111,9 @@ func (a *App) setStatus(s string) {
 	a.mu.Lock()
 	a.status = s
 	a.mu.Unlock()
-	runtime.EventsEmit(a.ctx, "vpn-status", s)
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "vpn-status", s)
+	}
 }
 
 func (a *App) Connect(username, password, configFile string) string {
@@ -174,10 +176,43 @@ func (a *App) Disconnect() string {
 	return "disconnected"
 }
 
+func (a *App) ClearAllSessions() string {
+	a.mu.Lock()
+	cancel := a.cancel
+	a.mu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+
+	out, _ := exec.Command("openvpn3", "sessions-list").Output()
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "Path:") {
+			parts := strings.Fields(trimmed)
+			if len(parts) >= 2 {
+				path := parts[1]
+				exec.Command("openvpn3", "session-manage", "--disconnect", "--path", path).Run()
+			}
+		}
+	}
+
+	exec.Command("pkill", "-f", "openvpn3 session-start").Run()
+	exec.Command("openvpn3", "session-manage", "--cleanup").Run()
+
+	a.setStatus("disconnected")
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "vpn-log", "\n[!] All OpenVPN sessions cleared & disconnected.\n")
+	}
+	return "cleared"
+}
+
 func (a *App) handleSession(ptmx io.ReadWriteCloser, cmd *exec.Cmd, username, password string) {
 	defer ptmx.Close()
 	defer func() {
-		if a.GetStatus() != "connected" {
+		s := a.GetStatus()
+		if s != "connected" && s != "auth_failed" {
 			a.setStatus("disconnected")
 		}
 	}()
@@ -191,31 +226,35 @@ func (a *App) handleSession(ptmx io.ReadWriteCloser, cmd *exec.Cmd, username, pa
 		if n > 0 {
 			chunk := string(buf[:n])
 			lineBuf += chunk
-			runtime.EventsEmit(a.ctx, "vpn-log", chunk)
+			if a.ctx != nil {
+				runtime.EventsEmit(a.ctx, "vpn-log", chunk)
+			}
 			lower := strings.ToLower(lineBuf)
+			matched := false
 
-			if strings.Contains(lower, "username") && !sentUser && username != "" {
+			if (strings.Contains(lower, "username") || strings.Contains(lower, "user name")) && !sentUser && username != "" {
 				ptmx.Write([]byte(username + "\n"))
 				sentUser = true
-				lineBuf = ""
+				matched = true
 			} else if strings.Contains(lower, "password") && !sentPass && password != "" {
 				ptmx.Write([]byte(password + "\n"))
 				sentPass = true
-				lineBuf = ""
+				matched = true
 			} else if strings.Contains(lower, "authenticator") || strings.Contains(lower, "challenge") || strings.Contains(lower, "otp") || strings.Contains(lower, "2fa") || strings.Contains(lower, "verification code") {
 				a.setStatus("waiting_2fa")
-				lineBuf = ""
+				matched = true
 			} else if strings.Contains(lower, "connected") {
 				a.setStatus("connected")
 				go a.startHealthCheck()
-				lineBuf = ""
-			} else if strings.Contains(lower, "auth_failed") || strings.Contains(lower, "authentication failed") {
+				matched = true
+			} else if strings.Contains(lower, "auth_failed") || strings.Contains(lower, "authentication failed") || strings.Contains(lower, "auth failed") {
 				a.setStatus("auth_failed")
 				return
 			}
 
-			// Reset buffer on newline to avoid matching old content
-			if strings.Contains(chunk, "\n") {
+			if matched {
+				lineBuf = ""
+			} else if strings.Contains(chunk, "\n") {
 				lineBuf = chunk[strings.LastIndex(chunk, "\n")+1:]
 			}
 		}
@@ -223,7 +262,9 @@ func (a *App) handleSession(ptmx io.ReadWriteCloser, cmd *exec.Cmd, username, pa
 			break
 		}
 	}
-	cmd.Wait()
+	if cmd != nil {
+		cmd.Wait()
+	}
 }
 
 func (a *App) startHealthCheck() {
