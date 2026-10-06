@@ -6,12 +6,16 @@ export function BrowseConfig() {
   return window['go']['main']['App']['BrowseConfig']();
 }
 
-export function Connect(arg1, arg2, arg3) {
-  return window['go']['main']['App']['Connect'](arg1, arg2, arg3);
+export function Connect(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['Connect'](arg1, arg2, arg3, arg4);
 }
 
 export function ClearAllSessions() {
   return window['go']['main']['App']['ClearAllSessions']();
+}
+
+export function GetSessionStats() {
+  return window['go']['main']['App']['GetSessionStats']();
 }
 
 export function DeleteProfile(arg1) {

@@ -197,3 +197,21 @@ func TestClearAllSessions(t *testing.T) {
 		t.Fatalf("expected status 'disconnected', got %q", app.GetStatus())
 	}
 }
+
+func TestGetSessionStats(t *testing.T) {
+	app := NewApp()
+	app.currentProfile = "MY-PROFILE"
+	app.configFile = "/path/to/test.ovpn"
+	app.setStatus("connected")
+
+	stats := app.GetSessionStats()
+	if stats.Status != "connected" {
+		t.Fatalf("expected status 'connected', got %q", stats.Status)
+	}
+	if stats.ProfileName != "MY-PROFILE" {
+		t.Fatalf("expected profile name 'MY-PROFILE', got %q", stats.ProfileName)
+	}
+	if stats.ConfigFile != "test.ovpn" {
+		t.Fatalf("expected config file 'test.ovpn', got %q", stats.ConfigFile)
+	}
+}

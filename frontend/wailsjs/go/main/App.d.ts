@@ -4,9 +4,11 @@ import {main} from '../models';
 
 export function BrowseConfig():Promise<string>;
 
-export function Connect(arg1:string,arg2:string,arg3:string):Promise<string>;
+export function Connect(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function ClearAllSessions():Promise<string>;
+
+export function GetSessionStats():Promise<main.SessionStats>;
 
 export function DeleteProfile(arg1:string):Promise<string>;
 

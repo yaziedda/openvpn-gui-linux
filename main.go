@@ -16,12 +16,12 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:  "OpenVPN Linux GUI",
-		Width:  410,
-		Height: 560,
+		Width:  420,
+		Height: 620,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 26, G: 26, B: 46, A: 1},
+		BackgroundColour: &options.RGBA{R: 20, G: 23, B: 32, A: 1},
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,

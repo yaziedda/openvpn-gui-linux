@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,13 +24,27 @@ type Profile struct {
 	ConfigFile string `json:"config_file"`
 }
 
+type SessionStats struct {
+	Status       string `json:"status"`
+	ProfileName  string `json:"profile_name"`
+	ConfigFile   string `json:"config_file"`
+	VPNIP        string `json:"vpn_ip"`
+	ServerIP     string `json:"server_ip"`
+	Device       string `json:"device"`
+	DurationSecs int64  `json:"duration_secs"`
+	BytesIn      int64  `json:"bytes_in"`
+	BytesOut     int64  `json:"bytes_out"`
+}
+
 type App struct {
-	ctx        context.Context
-	mu         sync.Mutex
-	ptmx       io.WriteCloser
-	cancel     context.CancelFunc
-	status     string
-	configFile string
+	ctx            context.Context
+	mu             sync.Mutex
+	ptmx           io.WriteCloser
+	cancel         context.CancelFunc
+	status         string
+	configFile     string
+	currentProfile string
+	connectedAt    time.Time
 }
 
 func NewApp() *App {
@@ -110,13 +126,18 @@ func (a *App) GetStatus() string {
 func (a *App) setStatus(s string) {
 	a.mu.Lock()
 	a.status = s
+	if s == "connected" && a.connectedAt.IsZero() {
+		a.connectedAt = time.Now()
+	} else if s != "connected" {
+		a.connectedAt = time.Time{}
+	}
 	a.mu.Unlock()
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, "vpn-status", s)
 	}
 }
 
-func (a *App) Connect(username, password, configFile string) string {
+func (a *App) Connect(username, password, configFile, profileName string) string {
 	a.mu.Lock()
 	if a.status == "connected" || a.status == "connecting" {
 		a.mu.Unlock()
@@ -129,6 +150,7 @@ func (a *App) Connect(username, password, configFile string) string {
 	}
 	a.mu.Lock()
 	a.configFile = configFile
+	a.currentProfile = profileName
 	a.mu.Unlock()
 
 	a.setStatus("connecting")
@@ -151,6 +173,111 @@ func (a *App) Connect(username, password, configFile string) string {
 
 	go a.handleSession(ptmx, cmd, username, password)
 	return "connecting"
+}
+
+func getVPNIP() (string, string) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "-", "-"
+	}
+	for _, iface := range ifaces {
+		if strings.HasPrefix(iface.Name, "tun") || strings.HasPrefix(iface.Name, "ovpn") {
+			addrs, err := iface.Addrs()
+			if err != nil {
+				continue
+			}
+			for _, addr := range addrs {
+				if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+					if ipnet.IP.To4() != nil {
+						return ipnet.IP.String(), iface.Name
+					}
+				}
+			}
+			return "-", iface.Name
+		}
+	}
+	return "-", "-"
+}
+
+func getServerIP(configFile string) string {
+	if configFile == "" {
+		return "-"
+	}
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return "-"
+	}
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "remote ") {
+			fields := strings.Fields(line)
+			if len(fields) >= 3 {
+				return fields[1] + ":" + fields[2]
+			} else if len(fields) >= 2 {
+				return fields[1]
+			}
+		}
+	}
+	return "-"
+}
+
+func getDeviceStats(dev string) (int64, int64) {
+	if dev == "" || dev == "-" {
+		return 0, 0
+	}
+	data, err := os.ReadFile("/proc/net/dev")
+	if err != nil {
+		return 0, 0
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		parts := strings.Split(line, ":")
+		if len(parts) == 2 && strings.TrimSpace(parts[0]) == dev {
+			fields := strings.Fields(parts[1])
+			if len(fields) >= 9 {
+				var rx, tx int64
+				fmt.Sscanf(fields[0], "%d", &rx)
+				fmt.Sscanf(fields[8], "%d", &tx)
+				return rx, tx
+			}
+		}
+	}
+	return 0, 0
+}
+
+func (a *App) GetSessionStats() SessionStats {
+	a.mu.Lock()
+	cfg := a.configFile
+	status := a.status
+	profileName := a.currentProfile
+	startTime := a.connectedAt
+	a.mu.Unlock()
+
+	vpnIP, dev := getVPNIP()
+	serverIP := getServerIP(cfg)
+
+	duration := int64(0)
+	if !startTime.IsZero() && status == "connected" {
+		duration = int64(time.Since(startTime).Seconds())
+	}
+
+	rx, tx := getDeviceStats(dev)
+
+	if profileName == "" && cfg != "" {
+		profileName = filepath.Base(cfg)
+	}
+
+	return SessionStats{
+		Status:       status,
+		ProfileName:  profileName,
+		ConfigFile:   filepath.Base(cfg),
+		VPNIP:        vpnIP,
+		ServerIP:     serverIP,
+		Device:       dev,
+		DurationSecs: duration,
+		BytesIn:      rx,
+		BytesOut:     tx,
+	}
 }
 
 func (a *App) SendOTP(otp string) {
