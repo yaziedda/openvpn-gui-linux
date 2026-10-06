@@ -162,6 +162,59 @@ button:hover {
     color: #ff5252;
 }
 
+.btn-row {
+    margin-top: 14px;
+    display: flex;
+    gap: 8px;
+}
+
+.btn-row .btn-connect {
+    flex: 2;
+    margin-top: 0;
+}
+
+.btn-row .btn-disconnect {
+    flex: 2;
+    margin-top: 0;
+}
+
+.btn-kill {
+    flex: 1;
+    background: rgba(198, 40, 40, 0.18);
+    color: #ff8a80;
+    border: 1px solid #c62828;
+    font-weight: 600;
+    padding: 9px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+
+.btn-kill:hover {
+    background: #c62828;
+    color: #fff;
+}
+
+.btn-kill-hdr {
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(198, 40, 40, 0.15);
+    color: #ff8a80;
+    border: 1px solid rgba(198, 40, 40, 0.5);
+    border-radius: 3px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.15s;
+}
+
+.btn-kill-hdr:hover {
+    background: #c62828;
+    color: #fff;
+}
+
 button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
@@ -188,23 +241,4 @@ button:disabled {
     border: none;
     border-top: 1px solid #2a2a4a;
     margin: 14px 0;
-}
-
-.btn-clear-all {
-    width: 100%;
-    margin-top: 10px;
-    background: transparent;
-    color: #777;
-    border: 1px solid #2a2a4a;
-    border-radius: 4px;
-    font-size: 11px;
-    padding: 7px;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-
-.btn-clear-all:hover {
-    background: rgba(198, 40, 40, 0.15);
-    border-color: #c62828;
-    color: #ff8a80;
 }

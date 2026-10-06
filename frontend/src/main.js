@@ -8,6 +8,7 @@ app.innerHTML = `
         <div class="status-dot" id="dot"></div>
         <h1>OpenVPN Linux GUI</h1>
         <span class="status-text" id="status-text">Disconnected</span>
+        <button class="btn-kill-hdr" id="btn-kill-hdr" title="Force kill & clear all OpenVPN sessions">✕ Kill All</button>
     </div>
     <div class="content">
         <div id="login-form">
@@ -41,7 +42,10 @@ app.innerHTML = `
                     <button class="btn-save" id="btn-save">Save</button>
                 </div>
             </div>
-            <button class="btn-connect" id="btn-connect">Connect</button>
+            <div class="row btn-row">
+                <button class="btn-connect" id="btn-connect">Connect</button>
+                <button class="btn-kill" id="btn-clear-all" title="Force kill & clear all OpenVPN sessions">Kill All VPN</button>
+            </div>
         </div>
         <div id="otp-form" class="hidden">
             <div class="form-group">
@@ -50,9 +54,13 @@ app.innerHTML = `
             </div>
             <button class="btn-otp" id="btn-otp">Submit</button>
         </div>
-        <button class="btn-disconnect hidden" id="btn-disconnect">Disconnect</button>
+        <div id="active-actions" class="hidden">
+            <div class="row btn-row">
+                <button class="btn-disconnect" id="btn-disconnect">Disconnect</button>
+                <button class="btn-kill" id="btn-clear-all-active" title="Force kill & clear all OpenVPN sessions">Kill All VPN</button>
+            </div>
+        </div>
         <div class="log-box" id="log"></div>
-        <button class="btn-clear-all" id="btn-clear-all" title="Force kill & clear all OpenVPN sessions">Clear All Sessions</button>
     </div>
 `;
 
@@ -123,7 +131,7 @@ function updateUI(s) {
     statusText.textContent = labels[s] || s;
     loginForm.classList.toggle('hidden', s === 'connecting' || s === 'waiting_2fa' || s === 'connected');
     otpForm.classList.toggle('hidden', s !== 'waiting_2fa');
-    btnDisconnect.classList.toggle('hidden', s !== 'connected' && s !== 'connecting' && s !== 'waiting_2fa');
+    $('active-actions').classList.toggle('hidden', s !== 'connected' && s !== 'connecting' && s !== 'waiting_2fa');
     if (s === 'waiting_2fa') $('otp').focus();
 }
 
@@ -145,16 +153,20 @@ $('btn-otp').addEventListener('click', async () => {
 $('otp').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-otp').click(); });
 passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-connect').click(); });
 btnDisconnect.addEventListener('click', () => Disconnect());
-$('btn-clear-all').addEventListener('click', async () => {
-    $('btn-clear-all').disabled = true;
-    $('btn-clear-all').textContent = 'Clearing...';
+
+async function handleKillAll() {
+    const btns = [$('btn-clear-all'), $('btn-clear-all-active'), $('btn-kill-hdr')].filter(Boolean);
+    btns.forEach(b => { b.disabled = true; b.dataset.origText = b.textContent; b.textContent = 'Killing...'; });
     try {
         await ClearAllSessions();
     } finally {
-        $('btn-clear-all').disabled = false;
-        $('btn-clear-all').textContent = 'Clear All Sessions';
+        btns.forEach(b => { b.disabled = false; b.textContent = b.dataset.origText || 'Kill All VPN'; });
     }
-});
+}
+
+$('btn-clear-all').addEventListener('click', handleKillAll);
+$('btn-clear-all-active').addEventListener('click', handleKillAll);
+$('btn-kill-hdr').addEventListener('click', handleKillAll);
 
 EventsOn('vpn-status', updateUI);
 EventsOn('vpn-log', line => { logEl.textContent += line + '\n'; logEl.scrollTop = logEl.scrollHeight; });
