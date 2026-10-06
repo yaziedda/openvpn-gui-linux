@@ -6,7 +6,7 @@ BIN_SRC="$(dirname "$0")/build/bin/$APP_NAME"
 BIN_DEST="$HOME/.local/bin/$APP_NAME"
 DESKTOP_FILE="$HOME/.local/share/applications/$APP_NAME.desktop"
 ICON_SRC="$(dirname "$0")/build/appicon.png"
-ICON_DEST="$HOME/.local/share/icons/$APP_NAME.png"
+ICON_DEST="$HOME/.local/share/icons/openvpn-logo.png"
 
 mkdir -p "$HOME/.local/bin"
 mkdir -p "$HOME/.local/share/applications"
@@ -14,6 +14,7 @@ mkdir -p "$HOME/.local/share/icons"
 
 install -m 755 "$BIN_SRC" "$BIN_DEST"
 cp "$ICON_SRC" "$ICON_DEST"
+cp "$ICON_SRC" "$HOME/.local/share/icons/$APP_NAME.png"
 
 # Deploy to hicolor and Tahoe-Neo theme
 for s in 512 256 128 64 48; do
