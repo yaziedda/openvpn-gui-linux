@@ -163,7 +163,7 @@ body {
     align-items: center;
 }
 
-input, select {
+input {
     width: 100%;
     padding: 9px 12px;
     border: 1px solid #2d374d;
@@ -175,13 +175,44 @@ input, select {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-input:focus, select:focus {
+input:focus {
     border-color: #ea580c;
     box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
 }
 
 input::placeholder {
     color: #64748b;
+}
+
+select {
+    width: 100%;
+    padding: 9px 36px 9px 12px;
+    border: 1px solid #2d374d;
+    border-radius: 6px;
+    background-color: #121620 !important;
+    color: #f8fafc !important;
+    font-size: 13px;
+    outline: none;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ea580c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 14px !important;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+select:focus {
+    border-color: #ea580c;
+    box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
+}
+
+select option {
+    background-color: #181d29 !important;
+    color: #f8fafc !important;
+    padding: 10px 12px;
 }
 
 .profile-save-row {
@@ -193,19 +224,24 @@ input::placeholder {
 }
 
 .btn-icon-del {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: #181d29;
+    color: #94a3b8;
+    border: 1px solid #2d374d;
     border-radius: 6px;
-    padding: 8px 12px;
+    padding: 9px 14px;
     cursor: pointer;
+    font-size: 13px;
     font-weight: 700;
     transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-icon-del:hover {
-    background: #ef4444;
-    color: #fff;
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
 }
 
 .btn-browse, .btn-save {

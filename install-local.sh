@@ -34,6 +34,7 @@ Icon=$ICON_DEST
 Type=Application
 Categories=Network;VPN;
 Terminal=false
+StartupWMClass=openvpn-gui-linux
 EOF
 
 # Copy to Desktop

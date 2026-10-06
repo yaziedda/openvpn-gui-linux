@@ -188,6 +188,18 @@ async function loadProfiles() {
         opt.dataset.password = p.password || '';
         profileSelect.appendChild(opt);
     });
+
+    if (profiles.length > 0 && !profileSelect.value) {
+        let targetIdx = 1;
+        for (let i = 0; i < profiles.length; i++) {
+            if (profiles[i].name.toLowerCase() === 'dxtr') {
+                targetIdx = i + 1;
+                break;
+            }
+        }
+        profileSelect.selectedIndex = targetIdx;
+        profileSelect.dispatchEvent(new Event('change'));
+    }
 }
 
 profileSelect.addEventListener('change', () => {
