@@ -17,7 +17,7 @@ func main() {
 	err := wails.Run(&options.App{
 		Title:  "OpenVPN Linux GUI",
 		Width:  420,
-		Height: 620,
+		Height: 660,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

@@ -30,6 +30,10 @@ export function GetProfiles() {
   return window['go']['main']['App']['GetProfiles']();
 }
 
+export function GetLastProfile() {
+  return window['go']['main']['App']['GetLastProfile']();
+}
+
 export function GetStatus() {
   return window['go']['main']['App']['GetStatus']();
 }

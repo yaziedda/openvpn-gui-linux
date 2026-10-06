@@ -29,6 +29,7 @@ export namespace main {
 	    duration_secs: number;
 	    bytes_in: number;
 	    bytes_out: number;
+	    ping_ms: number;
 
 	    static createFrom(source: any = {}) {
 	        return new SessionStats(source);
@@ -45,6 +46,7 @@ export namespace main {
 	        this.duration_secs = source["duration_secs"];
 	        this.bytes_in = source["bytes_in"];
 	        this.bytes_out = source["bytes_out"];
+	        this.ping_ms = source["ping_ms"];
 	    }
 	}
 

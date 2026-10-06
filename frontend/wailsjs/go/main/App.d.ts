@@ -16,6 +16,8 @@ export function Disconnect():Promise<string>;
 
 export function GetProfiles():Promise<Array<main.Profile>>;
 
+export function GetLastProfile():Promise<string>;
+
 export function GetStatus():Promise<string>;
 
 export function SaveProfile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;

@@ -34,6 +34,7 @@ type SessionStats struct {
 	DurationSecs int64  `json:"duration_secs"`
 	BytesIn      int64  `json:"bytes_in"`
 	BytesOut     int64  `json:"bytes_out"`
+	PingMs       int64  `json:"ping_ms"`
 }
 
 type App struct {
@@ -45,6 +46,7 @@ type App struct {
 	configFile     string
 	currentProfile string
 	connectedAt    time.Time
+	lastPingMs     int64
 }
 
 func NewApp() *App {
@@ -57,6 +59,23 @@ func (a *App) startup(ctx context.Context) {
 
 func profilesPath() string {
 	return filepath.Join(homeDir(), ".vpn", "profiles.json")
+}
+
+func lastProfilePath() string {
+	return filepath.Join(homeDir(), ".vpn", "last_profile.txt")
+}
+
+func (a *App) GetLastProfile() string {
+	data, err := os.ReadFile(lastProfilePath())
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+func (a *App) SaveLastProfile(name string) {
+	os.MkdirAll(filepath.Dir(lastProfilePath()), 0700)
+	os.WriteFile(lastProfilePath(), []byte(name), 0600)
 }
 
 func (a *App) GetProfiles() []Profile {
@@ -123,13 +142,56 @@ func (a *App) GetStatus() string {
 	return a.status
 }
 
+func measurePing() int64 {
+	start := time.Now()
+	conn, err := net.DialTimeout("tcp", "1.1.1.1:53", 800*time.Millisecond)
+	if err != nil {
+		conn, err = net.DialTimeout("tcp", "8.8.8.8:53", 800*time.Millisecond)
+		if err != nil {
+			return 0
+		}
+	}
+	defer conn.Close()
+	return time.Since(start).Milliseconds()
+}
+
+func (a *App) startPingMonitor() {
+	for {
+		a.mu.Lock()
+		connected := (a.status == "connected")
+		a.mu.Unlock()
+		if !connected {
+			return
+		}
+
+		ping := measurePing()
+
+		a.mu.Lock()
+		if a.status == "connected" {
+			a.lastPingMs = ping
+		} else {
+			a.lastPingMs = 0
+			a.mu.Unlock()
+			return
+		}
+		a.mu.Unlock()
+
+		time.Sleep(3 * time.Second)
+	}
+}
+
 func (a *App) setStatus(s string) {
 	a.mu.Lock()
+	prev := a.status
 	a.status = s
-	if s == "connected" && a.connectedAt.IsZero() {
-		a.connectedAt = time.Now()
-	} else if s != "connected" {
+	if s == "connected" {
+		if prev != "connected" {
+			a.connectedAt = time.Now()
+			go a.startPingMonitor()
+		}
+	} else {
 		a.connectedAt = time.Time{}
+		a.lastPingMs = 0
 	}
 	a.mu.Unlock()
 	if a.ctx != nil {
@@ -152,6 +214,10 @@ func (a *App) Connect(username, password, configFile, profileName string) string
 	a.configFile = configFile
 	a.currentProfile = profileName
 	a.mu.Unlock()
+
+	if profileName != "" {
+		a.SaveLastProfile(profileName)
+	}
 
 	a.setStatus("connecting")
 
@@ -251,6 +317,7 @@ func (a *App) GetSessionStats() SessionStats {
 	status := a.status
 	profileName := a.currentProfile
 	startTime := a.connectedAt
+	pingMs := a.lastPingMs
 	a.mu.Unlock()
 
 	vpnIP, dev := getVPNIP()
@@ -277,6 +344,7 @@ func (a *App) GetSessionStats() SessionStats {
 		DurationSecs: duration,
 		BytesIn:      rx,
 		BytesOut:     tx,
+		PingMs:       pingMs,
 	}
 }
 
